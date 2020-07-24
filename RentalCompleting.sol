@@ -32,7 +32,7 @@ contract RentalCompleting is Transaction{
     CarGroup public carGroup; 
     
     constructor() public{
-        initiator = 0x23ED60DEc9490AEBA10f9C36ED25Ae62FF0Ea216; //rentACar
+        initiator = 0xf57596949E8ee597e4D1464706a49CD71FB25AdF; //rentACar
         executor = msg.sender; //client
         
         carGroup.maxRentalDuration = 10000000; //10000000 = 10 dias como solidity não implementa Date do JS datas tem de ser feitas num contrato à parte
@@ -43,10 +43,9 @@ contract RentalCompleting is Transaction{
         carGroup.cars = [1,2,3,4];
     }
     
-    CarTaking public carTarking = new CarTaking();
-    CarReturning public carReturning = new CarReturning();
+   
     DepositPaying public depositPaying;
-    InvoicePaying public invoicePaying = new InvoicePaying();
+    InvoicePaying public invoicePaying;
     
     function returnsCarGroup(address _address) public  view returns (CarGroup memory){
         return CarGroup(carGroup.maxRentalDuration, carGroup.dailyRentalRate, carGroup.standardDepositAmount, carGroup.locationFineRate, carGroup.lateReturnFineRate, carGroup.cars);
@@ -57,8 +56,7 @@ contract RentalCompleting is Transaction{
     
     function requestRentalCompleting(uint256 _startingDate, uint256 _endingDate, string memory _fromBranch, string memory _toBranch, uint256 _depositAmount, uint256 _drivingLicenseExpirationDay) public
              atCFact(C_facts.Inital)
-             onlyBy(executor)
-             returns (address) {
+             onlyBy(executor){
                 
                  require(_endingDate >= _startingDate);
                  require((_endingDate - _startingDate) <= carGroup.maxRentalDuration);
@@ -71,22 +69,28 @@ contract RentalCompleting is Transaction{
                  rental.drivingLicenseExpirationDay = _drivingLicenseExpirationDay;
                  rental.carGroup = carGroup;
                  
-                 depositPaying = new DepositPaying(address(this));
+                 
                  
                  c_fact = C_facts.Requested;
-                 return address(depositPaying);
+                 
             }
              
     function promiseRentalCompleting() public
              atCFact(C_facts.Requested)
-             onlyBy(initiator){
-                 require(depositPaying.c_fact() == C_facts.Accepted); 
+             onlyBy(initiator)
+             returns (address){
+                 //while não tem de ser representado acho o seu trabalho e feito pelo stateMachine common pattern!!!!!!
+                 //require(depositPaying.c_fact() == C_facts.Accepted); 
                  //implementei os While com requires pq fica mais à la solidity mas não sei se é correto...
-                 require(carTarking.c_fact() == C_facts.Accepted);
-                 require(carReturning.c_fact() == C_facts.Accepted);
-                 require(invoicePaying.c_fact() == C_facts.Accepted);
+                 //require(carTarking.c_fact() == C_facts.Accepted);
+                 //require(carReturning.c_fact() == C_facts.Accepted);
+                 //require(invoicePaying.c_fact() == C_facts.Accepted);
+                 
+                 depositPaying = new DepositPaying(address(this));
                  
                  c_fact = C_facts.Promissed;
+                 
+                 return address(depositPaying);
              }
     
     function declineRentalCompleting() public
@@ -100,6 +104,8 @@ contract RentalCompleting is Transaction{
              atCFact(C_facts.Promissed)
              onlyBy(initiator)
              p_act(){
+                 
+                 
                  
                 c_fact = C_facts.Declared; 
              }
