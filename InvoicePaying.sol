@@ -7,24 +7,32 @@ import "./RentalCompleting.sol";
 
 contract InvoicePaying is Transaction {
     
-    CarReturning carReturning;
     RentalCompleting rentalCompleting;
+    CarReturning carReturning;
     
-    constructor(address _carReturning) public{
-        initiator = tx.origin; //client
-        executor = 0x87483BD38209d8fc0E244f9BF63E4141b300676F; //rentACar
-        
+    constructor(address _rentalCompleting, address _carReturning) public{
+        rentalCompleting = RentalCompleting(_rentalCompleting);
         carReturning = CarReturning(_carReturning);
+        initiator = rentalCompleting.executor(); //client
+        executor = rentalCompleting.initiator(); //rentACar
     }
-    function requestInvoicePaying() public
+    
+    uint256 pm_invoiceAmount;
+    uint256 da_invoiceAmount;
+    function requestInvoicePaying(uint256 _invoiceAmount) public
              atCFact(C_facts.Inital)
              onlyBy(executor){
+                 (uint256 startingDay, uint256 endingDay , , , , , , RentalCompleting.CarGroup memory carGroup) = rentalCompleting.rental();
+                 uint256 baseCharge = (endingDay - startingDay)*carGroup.dailyRentalRate;
+                 uint256 rentalCharge = baseCharge - carGroup.standardDepositAmount;
+                 require(_invoiceAmount == rentalCharge);
                  c_fact = C_facts.Requested;
              }
     
-    function promiseInvoicePaying() public
+    function promiseInvoicePaying(uint256 _pm_invoiceAmount) public
              atCFact(C_facts.Requested)
              onlyBy(initiator){
+                 pm_invoiceAmount = _pm_invoiceAmount;
                  c_fact = C_facts.Promissed;
              }
     
@@ -35,13 +43,16 @@ contract InvoicePaying is Transaction {
                  c_fact = C_facts.Inital;
              }
              
-    function declareInvoicePaying() public
+    function declareInvoicePaying() public payable
              atCFact(C_facts.Promissed)
              onlyBy(initiator)
              p_act(){
-               
-                
-                
+                (uint256 startingDay, uint256 endingDay , , , , , , RentalCompleting.CarGroup memory carGroup) = rentalCompleting.rental();
+                uint256 baseCharge = (endingDay - startingDay)*carGroup.dailyRentalRate;
+                uint256 rentalCharge = baseCharge - carGroup.standardDepositAmount;
+                require(msg.value >= rentalCharge);
+                executor.transfer(rentalCharge);
+                da_invoiceAmount = rentalCharge;
                 c_fact = C_facts.Declared; 
              }
              
@@ -50,8 +61,8 @@ contract InvoicePaying is Transaction {
              onlyBy(executor)
              returns (address)
              {
-                 
-                 rentalCompleting = carReturning.carTaking().depositPaying().rentalCompleting();
+                 require(da_invoiceAmount == pm_invoiceAmount);
+                 //rentalCompleting = address(rentalCompleting);
         
                  c_fact = C_facts.Accepted; 
                  
