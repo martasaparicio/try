@@ -14,8 +14,8 @@ contract Transaction {
     
     C_facts public c_fact = C_facts.Inital;
     
-    address public initiator;
-    address public executor;
+    address payable public initiator;
+    address payable public  executor;
     
     event p_fact(address _from, bytes32 _hash);
     
