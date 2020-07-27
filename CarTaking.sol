@@ -2,32 +2,38 @@ pragma experimental ABIEncoderV2;
 pragma solidity >=0.4.22 <0.7.0;
 
 import "./Transaction.sol";
+import "./RentalCompleting.sol";
 import "./DepositPaying.sol";
+import "./CarReturning.sol";
 
 contract CarTaking is Transaction {
     
-    DepositPaying public depositPaying;
-    CarReturning public carReturning;
+    RentalCompleting rentalCompleting;
+    DepositPaying depositPaying;
     
-    constructor(address _depositPaying) public{
-        initiator =  msg.sender; //client
-        executor = 0x87483BD38209d8fc0E244f9BF63E4141b300676F; //rentACar
-        
+    constructor(address _rentalCompleting, address _depositPaying) public{
+        rentalCompleting = RentalCompleting(_rentalCompleting);
         depositPaying = DepositPaying(_depositPaying);
+        initiator =  rentalCompleting.executor(); //client
+        executor = rentalCompleting.initiator(); //rentACar
     }
     
-    //RentalCompleting.CarGroup oi = depositPaying.getCarGroup();
+    string pm_car;
+    string da_car;
+    string public ac_car;
     
-    function requestCarTaking() public
+    function requestCarTaking(string memory _car) public
              atCFact(C_facts.Inital)
              onlyBy(executor){
-             require(depositPaying.getCarGroup().cars.length >= 1);
+                 ( , , , , , string memory car, , ) = rentalCompleting.rental();
+                 require(keccak256(abi.encodePacked(_car))==keccak256(abi.encodePacked(car)));
                  c_fact = C_facts.Requested;
              }
     
-    function promiseCarTaking() public
+    function promiseCarTaking(string memory _pm_car) public
              atCFact(C_facts.Requested)
              onlyBy(initiator){
+                 pm_car = _pm_car;
                  c_fact = C_facts.Promissed;
              }
     
@@ -38,13 +44,11 @@ contract CarTaking is Transaction {
                  c_fact = C_facts.Inital;
              }
              
-    function declareCarTaking() public
+    function declareCarTaking(string memory _da_car) public
              atCFact(C_facts.Promissed)
              onlyBy(initiator)
              p_act(){
-               
-                
-                
+                da_car = _da_car;
                 c_fact = C_facts.Declared; 
              }
              
@@ -53,8 +57,9 @@ contract CarTaking is Transaction {
              onlyBy(executor)
              returns (address)
              {
-                 
-                 carReturning = new CarReturning(address(this));
+                 require(keccak256(abi.encodePacked(da_car))==keccak256(abi.encodePacked(pm_car)));
+                 ac_car = da_car;
+                 CarReturning carReturning = new CarReturning(address(rentalCompleting),address(this));
                  
                  c_fact = C_facts.Accepted; 
                  
