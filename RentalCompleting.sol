@@ -2,9 +2,9 @@ pragma experimental ABIEncoderV2;
 pragma solidity >=0.4.22 <0.7.0;
 
 import "./Transaction.sol";
+import "./DepositPaying.sol";
 import "./CarTaking.sol";
 import "./CarReturning.sol";
-import "./DepositPaying.sol";
 import "./InvoicePaying.sol";
 
 contract RentalCompleting is Transaction{
@@ -12,64 +12,58 @@ contract RentalCompleting is Transaction{
     struct Rental {
         uint256 stratingDate;
         uint256 endingDate;
-        string pickUpLocation;
-        string returnLocation;
-        uint256 drivingLicenseExpirationDay;       //not sure
+        uint256 maxRentalDuration;
+        uint256 drivingLicenseExpirationDay;
+        
         uint256 depositAmount;
+        string car;
+        uint256 invoiceAmount;
+        
         CarGroup carGroup;
     }
     
     struct CarGroup {
-        uint256 maxRentalDuration;
-        uint256 dailyRentalRate;
+        string[] freeCars;
         uint256 standardDepositAmount;
-        uint256 locationFineRate;
-        uint256 lateReturnFineRate;
-        uint256[] cars;
+        uint256 dailyRentalRate;
     }
-    
+     
     Rental public rental;
-    CarGroup public carGroup; 
     
     constructor() public{
-        initiator = 0xf57596949E8ee597e4D1464706a49CD71FB25AdF; //rentACar
+        initiator = 0x5c80a326502c217bf2d7c4d5Ffb0Fd53375410B4; //rentACar
         executor = msg.sender; //client
         
-        carGroup.maxRentalDuration = 10000000; //10000000 = 10 dias como solidity não implementa Date do JS datas tem de ser feitas num contrato à parte
-        carGroup.dailyRentalRate = 35;
-        carGroup.standardDepositAmount = 35;
-        carGroup.locationFineRate = 40;
-        carGroup.lateReturnFineRate = 40;
-        carGroup.cars = [1,2,3,4];
+        rental.maxRentalDuration = 10000000; //10dias
+        rental.depositAmount=0;
+        rental.invoiceAmount=0;
+        rental.car = '';
+        rental.carGroup.dailyRentalRate = 10 wei;
+        rental.carGroup.standardDepositAmount = 10 wei;
+        rental.carGroup.freeCars = ['PG0870','7293FQ','2533XQ'];
     }
     
-   
-    DepositPaying public depositPaying;
-    InvoicePaying public invoicePaying;
+    //function returnsRental(address _address) public view returns (Rental memory){
+    //    return Rental(rental.stratingDate, 
+    //           rental.endingDate, 
+    //           rental.maxRentalDuration, 
+    //           rental.drivingLicenseExpirationDay, 
+    //           rental.depositAmount,
+    //           rental.car,
+    //           rental.invoiceAmount,
+    //           rental.carGroup);
+    //}
     
-    function returnsCarGroup(address _address) public  view returns (CarGroup memory){
-        return CarGroup(carGroup.maxRentalDuration, carGroup.dailyRentalRate, carGroup.standardDepositAmount, carGroup.locationFineRate, carGroup.lateReturnFineRate, carGroup.cars);
-    }
-    function returnsRental(address _address) public view returns (Rental memory){
-        return Rental(rental.stratingDate, rental.endingDate, rental.pickUpLocation, rental.returnLocation, rental.depositAmount, rental.drivingLicenseExpirationDay, rental.carGroup);
-    }
-    
-    function requestRentalCompleting(uint256 _startingDate, uint256 _endingDate, string memory _fromBranch, string memory _toBranch, uint256 _depositAmount, uint256 _drivingLicenseExpirationDay) public
+    function requestRentalCompleting(uint256 _startingDate, uint256 _endingDate, uint256 _drivingLicenseExpirationDay) public
              atCFact(C_facts.Inital)
              onlyBy(executor){
                 
                  require(_endingDate >= _startingDate);
-                 require((_endingDate - _startingDate) <= carGroup.maxRentalDuration);
+                 require((_endingDate - _startingDate) <= rental.maxRentalDuration);
                  require(_drivingLicenseExpirationDay >= _endingDate);
                  rental.stratingDate = _startingDate;
                  rental.endingDate = _endingDate;
-                 rental.pickUpLocation = _fromBranch;
-                 rental.returnLocation = _toBranch;
-                 rental.depositAmount = _depositAmount;
                  rental.drivingLicenseExpirationDay = _drivingLicenseExpirationDay;
-                 rental.carGroup = carGroup;
-                 
-                 
                  
                  c_fact = C_facts.Requested;
                  
@@ -79,14 +73,10 @@ contract RentalCompleting is Transaction{
              atCFact(C_facts.Requested)
              onlyBy(initiator)
              returns (address){
-                 //while não tem de ser representado acho o seu trabalho e feito pelo stateMachine common pattern!!!!!!
-                 //require(depositPaying.c_fact() == C_facts.Accepted); 
+                 //while não tem de ser representado acho o seu trabalho e feito pelo stateMachine common pattern
                  //implementei os While com requires pq fica mais à la solidity mas não sei se é correto...
-                 //require(carTarking.c_fact() == C_facts.Accepted);
-                 //require(carReturning.c_fact() == C_facts.Accepted);
-                 //require(invoicePaying.c_fact() == C_facts.Accepted);
-                 
-                 depositPaying = new DepositPaying(address(this));
+                 rental.car=rental.carGroup.freeCars[0];
+                 DepositPaying depositPaying = new DepositPaying(address(this));
                  
                  c_fact = C_facts.Promissed;
                  
@@ -104,8 +94,6 @@ contract RentalCompleting is Transaction{
              atCFact(C_facts.Promissed)
              onlyBy(initiator)
              p_act(){
-                 
-                 
                  
                 c_fact = C_facts.Declared; 
              }
