@@ -32,9 +32,10 @@ contract RentalCompleting is Transaction{
     }
      
     Rental public rental;
+    DepositPaying depositPaying;
     
     constructor() public{
-        initiator = 0xD5461889488710E9ac6eA3Cb5e984f5af4667926; //rentACar
+        initiator = 0x527193B8460C2D534426f79391f806E40b534AC8; //rentACar
         executor = msg.sender; //client
         
         rental.maxRentalDuration = 10000000; //10dias
@@ -44,6 +45,10 @@ contract RentalCompleting is Transaction{
         rental.carGroup.dailyRentalRate = 10 wei;
         rental.carGroup.standardDepositAmount = 10 wei;
         rental.carGroup.freeCars = ['PG0870','7293FQ','2533XQ'];
+    }
+    
+    function setCFact(C_facts _c_fact) private {
+        c_fact = _c_fact;
     }
     
     function requestRentalCompleting(uint256 _startingDate, uint256 _endingDate, uint256 _drivingLicenseExpirationDay) public
@@ -63,12 +68,12 @@ contract RentalCompleting is Transaction{
     function promiseRentalCompleting() public
              atCFact(C_facts.Requested)
              onlyBy(initiator)
-             transitionNext(true)
+             //transitionNext(true)
              returns (address){
                  //while não tem de ser representado acho o seu trabalho e feito pelo stateMachine common pattern
                  //implementei os While com requires pq fica mais à la solidity mas não sei se é correto...
                  rental.car=rental.carGroup.freeCars[0];
-                 DepositPaying depositPaying = new DepositPaying(address(this));
+                 depositPaying = new DepositPaying(address(this));
 
                  return address(depositPaying);
              }
@@ -81,10 +86,16 @@ contract RentalCompleting is Transaction{
              }
              
     function declareRentalCompleting() public
-             atCFact(C_facts.Promissed)
+             //atCFact(C_facts.Promissed)
              onlyBy(initiator)
              p_act()
              transitionNext(true){
+                 CarTaking carTaking = depositPaying.carTaking();
+                 CarReturning carReturning = carTaking.carReturning();
+                 InvoicePaying invoicePaying = carReturning.invoicePaying();
+                 C_facts cf = invoicePaying.c_fact();
+                 require(cf == C_facts.Accepted);
+                 c_fact = C_facts.Promissed;
                  
              }
              
