@@ -3,72 +3,79 @@ pragma solidity >=0.4.22 <0.7.0;
 
 import "./Transaction.sol";
 import "./RentalCompleting.sol";
-//import "./CarTaking.sol";
+import "./CarTaking.sol";
 
 contract DepositPaying is Transaction {
     
-    RentalCompleting public rentalCompleting;
-    CarTaking public carTarking;
+    RentalCompleting rentalCompleting;
+    //CarTaking public carTarking;
 
     constructor(address _rentalCompleting) public{
-        initiator = msg.sender; //client   msg.sender                            
-        executor = 0xf57596949E8ee597e4D1464706a49CD71FB25AdF; //rentACar
         
         rentalCompleting = RentalCompleting(_rentalCompleting);
-    }
-    function getCarGroup() view public returns (RentalCompleting.CarGroup memory){
-        return rentalCompleting.returnsCarGroup(address(this));
-    }
-    function getRental() view public returns (RentalCompleting.Rental memory){
-        return rentalCompleting.returnsRental(address(this));
+        initiator = rentalCompleting.executor(); //client   msg.sender                            
+        executor = rentalCompleting.initiator(); //rentACar
     }
     
-    function requestDepositPaying() public
+    //function getRental() view public returns (RentalCompleting.Rental memory){
+    //    return rentalCompleting.returnsRental(address(this));
+    //}
+    
+    uint256 pm_depositAmount;
+    uint256 da_depositAmount;
+    
+    function requestDepositPaying(uint256 _rq_depositAmount) public
              atCFact(C_facts.Inital)
-             onlyBy(executor){
-             //require(getCarGroup().standardDepositAmount == getRental().depositAmount);COMO SE ACEDE
-                 c_fact = C_facts.Requested;
+             onlyBy(executor)
+             transitionNext(true){
+                 ( , , , , , , , RentalCompleting.CarGroup memory carGroup) = rentalCompleting.rental();
+                 require(_rq_depositAmount == carGroup.standardDepositAmount);
              }
     
-    function promiseRentalCompleting() public
+    function promiseDepositPaying(uint256 _pm_depositAmount) public
              atCFact(C_facts.Requested)
-             onlyBy(initiator){
+             onlyBy(initiator)
+             transitionNext(true){
+                 pm_depositAmount = _pm_depositAmount;
                  
-                 c_fact = C_facts.Promissed;
              }
     
-    function declineRentalCompleting() public
+    function declineDepositPaying() public
              atCFact(C_facts.Requested)
-             onlyBy(initiator){
+             onlyBy(initiator)
+             transitionNext(false){
                  
-                 c_fact = C_facts.Inital;
              }
              
-    function declareRentalCompleting() public
+    function declareDepositPaying() public payable
              atCFact(C_facts.Promissed)
              onlyBy(initiator)
-             p_act(){
-                require(getCarGroup().standardDepositAmount == getRental().depositAmount); //NOT SURE...
+             p_act()
+             transitionNext(true){
+                 ( , , , , , , , RentalCompleting.CarGroup memory carGroup) = rentalCompleting.rental();
+                require(msg.value >= carGroup.standardDepositAmount);
+                executor.transfer(carGroup.standardDepositAmount);
+                da_depositAmount = carGroup.standardDepositAmount;
                 
-                c_fact = C_facts.Declared; 
              }
              
-    function acceptRentalCompleting() public
+    function acceptDepositPaying() public
              atCFact(C_facts.Declared)
              onlyBy(executor)
+             transitionNext(true)
              returns (address){
+                 require(da_depositAmount == pm_depositAmount);
                  
-                 carTarking = new CarTaking(address(this));
-                 
-                 c_fact = C_facts.Accepted; 
+                 //getRental().depositAmount = da_depositAmount;
+                 CarTaking carTarking = new CarTaking(address(rentalCompleting), address(this));c_fact = C_facts.Accepted; 
                  
                  return address(carTarking);
              }
              
-    function rejectRentalCompleting() public
+    function rejectDepositPaying() public
              atCFact(C_facts.Declared)
-             onlyBy(executor){
+             onlyBy(executor)
+             transitionNext(false){
                  
-                 c_fact = C_facts.Rejected;
              }
 }
