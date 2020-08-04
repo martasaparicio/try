@@ -2,67 +2,70 @@ pragma experimental ABIEncoderV2;
 pragma solidity >=0.4.22 <0.7.0;
 
 import "./Transaction.sol";
+import "./RentalCompleting.sol";
 import "./CarTaking.sol";
 
 contract CarReturning is Transaction {
     
-    CarTaking public carTaking;
-    InvoicePaying public invoicePaying;
+    RentalCompleting rentalCompleting;
+    CarTaking carTaking;
     
-    constructor(address _carTaking) public{
-        initiator =  msg.sender; //client
-        executor = 0x87483BD38209d8fc0E244f9BF63E4141b300676F; //rentACar
-        
+    constructor(address _rentalCompleting, address _carTaking) public{
+        rentalCompleting = RentalCompleting(_rentalCompleting);
         carTaking = CarTaking(_carTaking);
+        initiator = rentalCompleting.executor(); //client
+        executor = rentalCompleting.initiator(); //rentACar
     }
+    string pm_car;
+    string da_car;
     
-    //RentalCompleting.CarGroup oi = carTaking.depositPaying().getCarGroup();
-    function requestCarReturning() public
+    function requestCarReturning(string memory _rq_car) public
              atCFact(C_facts.Inital)
-             onlyBy(executor){
-                 c_fact = C_facts.Requested;
+             onlyBy(executor)
+             transitionNext(true){
+                 require(keccak256(abi.encodePacked(_rq_car))==keccak256(abi.encodePacked(carTaking.ac_car())));
+                 
              }
     
-    function promiseCarReturning() public
+    function promiseCarReturning(string memory _car) public
              atCFact(C_facts.Requested)
-             onlyBy(initiator){
-                 c_fact = C_facts.Promissed;
+             onlyBy(initiator)
+             transitionNext(true){
+                 pm_car = _car;
              }
     
     function declineCarReturning() public
              atCFact(C_facts.Requested)
-             onlyBy(initiator){
+             onlyBy(initiator)
+             transitionNext(false){
                  
-                 c_fact = C_facts.Inital;
              }
              
-    function declareCarReturning() public
+    function declareCarReturning(string memory _car) public
              atCFact(C_facts.Promissed)
              onlyBy(initiator)
-             p_act(){
-               
-                
-                
-                c_fact = C_facts.Declared; 
+             p_act()
+             transitionNext(true){
+                da_car = _car;
              }
              
     function acceptCarReturning() public
              atCFact(C_facts.Declared)
              onlyBy(executor)
+             transitionNext(true)
              returns (address)
              {
+                 require(keccak256(abi.encodePacked(da_car))==keccak256(abi.encodePacked(pm_car)));
                  
-                 invoicePaying = new InvoicePaying(address(this));
-                 
-                 c_fact = C_facts.Accepted; 
+                 InvoicePaying invoicePaying = new InvoicePaying(address(rentalCompleting), address(this));
                  
                  return address(invoicePaying);
              }
              
     function rejectCarReturning() public
              atCFact(C_facts.Declared)
-             onlyBy(executor){
+             onlyBy(executor)
+             transitionNext(false){
                  
-                 c_fact = C_facts.Rejected;
              }
 }
