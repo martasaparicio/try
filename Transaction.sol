@@ -1,21 +1,21 @@
 pragma solidity >=0.4.22 <0.7.0;
 
 contract Transaction {
-    
+
     enum C_facts {
         Inital,
         Requested,
         Promissed, 
-        Declined,
         Declared, 
         Accepted,
+        Declined,
         Rejected
     }
     
     C_facts public c_fact = C_facts.Inital;
     
-    address public initiator;
-    address public executor;
+    address payable public initiator;
+    address payable public  executor;
     
     event p_fact(address _from, bytes32 _hash);
     
@@ -40,5 +40,25 @@ contract Transaction {
             "Sender not authorized."
         );
         _;
+    }
+    
+    function nextCFact(bool happyFlow) internal {
+        if(happyFlow == true){
+            c_fact = C_facts(uint(c_fact) + 1);
+        }
+        if(happyFlow == false && c_fact == C_facts.Requested){
+            c_fact = C_facts.Declined;
+        }
+        if(happyFlow == false && c_fact == C_facts.Declared){
+            c_fact = C_facts.Rejected;
+        }
+    }
+    
+    // This modifier goes to the next stage
+    // after the function is done.
+    modifier transitionNext(bool happyFlow)
+    {   
+            _;
+            nextCFact(happyFlow);
     }
 }
