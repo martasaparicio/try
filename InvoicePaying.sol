@@ -63,8 +63,6 @@ contract InvoicePaying is Transaction {
              returns (address)
              {
                  require(da_invoiceAmount == pm_invoiceAmount);
-                 //rentalCompleting = address(rentalCompleting);
-                 
                  return address(rentalCompleting);
              }
              
@@ -72,7 +70,7 @@ contract InvoicePaying is Transaction {
              atCFact(C_facts.Declared)
              onlyBy(executor)
              transitionNext(false){
-             
+                 
              }
     
 }
