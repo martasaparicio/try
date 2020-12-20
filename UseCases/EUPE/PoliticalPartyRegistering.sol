@@ -2,67 +2,74 @@ pragma experimental ABIEncoderV2;
 pragma solidity >=0.4.22 <0.7.0;
 
 import "./Transaction.sol";
-import "./Elec.sol";
-import "./CarTaking.sol";
+import "./ElectionCompleting.sol";
+import "./CandidateRegistering.sol";
 
 contract PoliticalPartyRegistering is Transaction {
     
-    RentalCompleting rentalCompleting;
-    CarTaking carTaking;
+    ElectionCompleting electionCompleting;
     
-    constructor(address _rentalCompleting, address _carTaking) public{
-        rentalCompleting = RentalCompleting(_rentalCompleting);
-        carTaking = CarTaking(_carTaking);
-        initiator = rentalCompleting.executor(); //client
-        executor = rentalCompleting.initiator(); //rentACar
+    constructor(address _electionCompleting) public{
+        electionCompleting = ElectionCompleting(_electionCompleting);
+        initiator = electionCompleting.executor(); 
+        executor = electionCompleting.initiator(); 
     }
-    string pm_car;
-    string da_car;
     
-    function requestCarReturning(string memory _rq_car) public
+    function requestPoliticalPartyRegistering() public
              atCFact(C_facts.Inital)
              onlyBy(executor)
              transitionNext(true){
-                 require(keccak256(abi.encodePacked(_rq_car))==keccak256(abi.encodePacked(carTaking.ac_car())));
-                 
+                            
              }
     
-    function promiseCarReturning(string memory _car) public
+    function promisePoliticalPartyRegistering() public
              atCFact(C_facts.Requested)
              onlyBy(initiator)
              transitionNext(true){
-                 pm_car = _car;
+             
              }
     
-    function declineCarReturning() public
+    function declinePoliticalPartyRegistering() public
              atCFact(C_facts.Requested)
              onlyBy(initiator)
              transitionNext(false){
                  
              }
              
-    function declareCarReturning(string memory _car) public
+    function declarePoliticalPartyRegistering(string memory name, string memory code, string memory website, uint256 countryId) public
              atCFact(C_facts.Promissed)
              onlyBy(initiator)
              p_act()
              transitionNext(true){
-                da_car = _car;
+                require(now > partyRegistrationEnd);
+                require(politicalParties[msg.sender].id == address(0));
+                PoliticalParty memory party = PoliticalParty({
+                    id: msg.sender,
+                    name: name,
+                    code: code,
+                    website: website,
+                    voteCount: 0,
+                    allocatedSeats: 0,
+                    countryId: countryId
+                });
+                politicalParties[msg.sender] = party;
+                politicalPartiesKeys.push(msg.sender);
              }
              
-    function acceptCarReturning() public
+    function acceptPoliticalPartyRegistering() public
              atCFact(C_facts.Declared)
              onlyBy(executor)
              transitionNext(true)
              returns (address)
              {
-                 require(keccak256(abi.encodePacked(da_car))==keccak256(abi.encodePacked(pm_car)));
+                
+                CandidateRegistering candidateRegistering = new CandidateRegistering(address(electionCompleting), address(this));
                  
-                 InvoicePaying invoicePaying = new InvoicePaying(address(rentalCompleting), address(this));
-                 
-                 return address(invoicePaying);
+                 return address(candidateRegistering);
+                
              }
              
-    function rejectCarReturning() public
+    function rejectPoliticalPartyRegistering() public
              atCFact(C_facts.Declared)
              onlyBy(executor)
              transitionNext(false){
