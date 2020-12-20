@@ -35,14 +35,7 @@ contract VotingToken is Ownable, ERC721{
         executor = msg.sender;
         
         votingToken = new VotingToken("VotingToken","VOTE");
-        candidateApprovalEnd = 9598986017;
-	      candidateRegistrationEnd = 9598986017;
-	      partyRegistrationEnd = 9598986017;
-	    
-		    CountryElections memory czechElections = CountryElections(0,"Czech Republic", 9598986017, 959994017, new address[](0), VotingSystem.OpenList, 10, 20, 18);
-        countries.push(czechElections);
-        CountryElections memory germanElections = CountryElections(1,"Germany", 9598986017, 959994017, new address[](0), VotingSystem.ClosedList, 20, 40, 18);
-        countries.push(germanElections);
+
     }
     
     function requestElectionControlling() public
