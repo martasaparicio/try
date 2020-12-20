@@ -7,6 +7,64 @@ import "./PoliticalPartyRegistering.sol";
 
 contract ElectionCompleting is Transaction {
 
+uint256 approveCandidatesCounter; 
+    
+    VotingToken votingToken;
+    
+    uint candidateApprovalEnd;
+
+	  uint candidateRegistrationEnd;
+
+	  uint partyRegistrationEnd;
+
+	  uint startDate;
+
+	  mapping (address => Candidate) candidates;
+	  address[] candidatesKeys;
+
+	  mapping (address => PoliticalParty) politicalParties;
+	  address[] politicalPartiesKeys;
+
+	  CountryElections[] countries;
+
+	  enum VotingSystem{
+		  ClosedList,
+		  OpenList,
+		  SingleTransferable
+	  }
+
+	  struct CountryElections{
+		  uint256 id;
+		  string countryName;
+		  uint electionBeginDate;
+		  uint electionEndDate;
+		  address[] voters;
+		  VotingSystem votingSystem;
+		  int availableSeats;
+		  uint8 electoralTreshold;
+		  uint8 minimumAge;
+	  }
+
+	  struct PoliticalParty{
+		  address id;
+		  string name;
+		  string code;
+		  string website;
+		  int voteCount;
+		  int allocatedSeats;
+		  uint256 countryId;
+	  }
+
+	  struct Candidate{
+		  address id;
+		  string name;
+		  string website;
+		  int voteCount;
+		  bool hasSeat;
+		  bool approved;
+		  address partyId;
+	  }
+
     ElectionControlling electionControlling;
     
     constructor(address _electionControlling) public{
