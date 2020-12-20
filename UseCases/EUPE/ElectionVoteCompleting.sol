@@ -67,7 +67,8 @@ contract ElectionVoteCompleting is Transaction {
              transitionNext(true)
              returns (address)
              {
-             
+                SeatAssigning seatAssigning = new SeatAssigning(address(electionCompleting), address(this));
+                return address(seatAssigning);
              }
              
     function rejectElectionVoteCompleting() public
