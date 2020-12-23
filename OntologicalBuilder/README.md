@@ -6,4 +6,4 @@
   
     2.2 Add file: customblocks_stub.js
   
-    2.3 Replace file index.html
+    2.3 Replace file: index.html
